@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  crawl-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crawl-mcp-server
+    ports:
+      - "8012:8012"
+    environment:
+      - CRAWL_MCP_HOST=0.0.0.0
+      - CRAWL_MCP_PORT=8012
+      - CRAWL_MCP_LOG_LEVEL=INFO
+      - CRAWL_MCP_LOG_FORMAT=json
+      - CRAWL_MCP_CORS_ENABLED=true
+      - CRAWL_MCP_CORS_ORIGINS=*
+      - CRAWL_MCP_RATE_LIMIT_ENABLED=true
+      - CRAWL_MCP_RATE_LIMIT_REQUESTS=100
+    volumes:
+      - ./logs:/app/logs
+      - ./app:/app/app  # For development hot-reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8012/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - crawl-network
+
+networks:
+  crawl-network:
+    driver: bridge
+
