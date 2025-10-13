@@ -277,3 +277,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 Made with ❤️ for the AI/LLM community
 
+
+## Important Note
+
+The `libs/crawl4ai` directory is not included in the repository. The crawl4ai library is installed via pip:
+
+```bash
+pip install crawl4ai
+```
+
+This keeps the repository size manageable and ensures you always get the latest compatible version of crawl4ai.
