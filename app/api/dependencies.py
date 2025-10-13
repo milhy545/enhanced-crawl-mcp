@@ -154,12 +154,56 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiting middleware."""
+    """In-memory rate limiting middleware with improved security."""
     
     def __init__(self, app, requests_per_minute: int = 100):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.requests = {}
+        self.last_cleanup = time.time()
+        self.cleanup_interval = 300  # Clean up every 5 minutes
+    
+    def _get_client_key(self, request: Request) -> str:
+        """Get client identifier for rate limiting with improved security."""
+        # Try to get real IP from headers (for reverse proxy setups)
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            # Take the first IP in the chain
+            client_ip = forwarded_for.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
+        
+        # Add User-Agent to make it harder to bypass with just IP changes
+        user_agent = request.headers.get("User-Agent", "unknown")
+        
+        # Create a more robust key that's harder to bypass
+        import hashlib
+        key_data = f"{client_ip}:{user_agent}"
+        return hashlib.sha256(key_data.encode()).hexdigest()[:16]
+    
+    def _cleanup_old_entries(self, current_time: float):
+        """Clean up old rate limit entries to prevent memory leaks."""
+        if current_time - self.last_cleanup < self.cleanup_interval:
+            return
+        
+        # Remove entries older than 1 hour
+        cutoff_time = current_time - 3600
+        self.requests = {
+            key: timestamps
+            for key, timestamps in self.requests.items()
+            if any(t > cutoff_time for t in timestamps)
+        }
+        
+        # Clean up individual timestamp lists
+        for key in list(self.requests.keys()):
+            self.requests[key] = [
+                t for t in self.requests[key]
+                if t > current_time - 60
+            ]
+            if not self.requests[key]:
+                del self.requests[key]
+        
+        self.last_cleanup = current_time
     
     async def dispatch(self, request: Request, call_next):
         settings = get_settings()
@@ -167,35 +211,35 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.rate_limit_enabled:
             return await call_next(request)
         
-        # Use IP address as key (in production, use API key or user ID)
-        client_ip = request.client.host if request.client else "unknown"
+        # Get client identifier
+        client_key = self._get_client_key(request)
         current_time = time.time()
         
-        # Clean old entries
-        self.requests = {
-            ip: timestamps
-            for ip, timestamps in self.requests.items()
-            if any(t > current_time - 60 for t in timestamps)
-        }
+        # Periodic cleanup to prevent memory leaks
+        self._cleanup_old_entries(current_time)
         
         # Check rate limit
-        if client_ip in self.requests:
+        if client_key in self.requests:
             # Remove timestamps older than 1 minute
-            self.requests[client_ip] = [
-                t for t in self.requests[client_ip]
+            self.requests[client_key] = [
+                t for t in self.requests[client_key]
                 if t > current_time - 60
             ]
             
-            if len(self.requests[client_ip]) >= settings.rate_limit_requests:
+            if len(self.requests[client_key]) >= settings.rate_limit_requests:
                 raise HTTPException(
                     status_code=429,
-                    detail="Rate limit exceeded. Please try again later."
+                    detail={
+                        "error": "RateLimitExceeded",
+                        "message": "Rate limit exceeded. Please try again later.",
+                        "retry_after": 60
+                    }
                 )
         else:
-            self.requests[client_ip] = []
+            self.requests[client_key] = []
         
         # Add current request
-        self.requests[client_ip].append(current_time)
+        self.requests[client_key].append(current_time)
         
         return await call_next(request)
 

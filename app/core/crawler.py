@@ -151,7 +151,7 @@ class WebCrawler:
                 
             except asyncio.TimeoutError as e:
                 last_error = CrawlTimeoutError(url, timeout)
-                if attempt >= max_retries:
+                if attempt == max_retries:  # Fixed: use == instead of >=
                     crawler_logger.log_crawl_failure(
                         url,
                         request_id,
@@ -162,7 +162,7 @@ class WebCrawler:
                     
             except Exception as e:
                 last_error = CrawlError(f"Crawl failed: {str(e)}", url=url)
-                if attempt >= max_retries:
+                if attempt == max_retries:  # Fixed: use == instead of >=
                     crawler_logger.log_crawl_failure(
                         url,
                         request_id,
@@ -171,7 +171,7 @@ class WebCrawler:
                     )
                     raise last_error
         
-        # All retries exhausted
+        # All retries exhausted - this should never be reached due to the fixes above
         raise CrawlRetryExhaustedError(url, max_retries + 1)
     
     async def _do_crawl(
@@ -252,7 +252,7 @@ class WebCrawler:
         **kwargs
     ) -> list[CrawlResult]:
         """
-        Crawl multiple URLs concurrently.
+        Crawl multiple URLs concurrently with improved error handling.
         
         Args:
             urls: List of URLs to crawl
@@ -265,33 +265,50 @@ class WebCrawler:
         if not request_id:
             request_id = str(uuid.uuid4())
         
-        # Create tasks
+        # Create tasks with proper URL tracking
         tasks = []
-        for url in urls:
-            task = self.crawl(url, request_id=f"{request_id}_{url}", **kwargs)
-            tasks.append(task)
+        for i, url in enumerate(urls):
+            task = self.crawl(url, request_id=f"{request_id}_{i}", **kwargs)
+            tasks.append((url, task))  # Store URL with task for better error handling
         
         # Execute concurrently with semaphore for rate limiting
         semaphore = asyncio.Semaphore(self.settings.crawler_max_concurrent)
         
-        async def limited_crawl(task):
+        async def limited_crawl(url, task):
             async with semaphore:
                 try:
                     return await task
                 except Exception as e:
-                    # Return error result instead of raising
-                    logger.error(f"Batch crawl error: {str(e)}", exc_info=e)
+                    # Return error result with proper URL instead of raising
+                    logger.error(f"Batch crawl error for {url}: {str(e)}", exc_info=e)
                     return CrawlResult(
-                        url="unknown",
+                        url=url,  # Fixed: use actual URL instead of "unknown"
                         markdown="",
                         success=False,
                         error=str(e)
                     )
         
+        # Use return_exceptions=True to handle individual failures gracefully
         results = await asyncio.gather(
-            *[limited_crawl(task) for task in tasks],
-            return_exceptions=False
+            *[limited_crawl(url, task) for url, task in tasks],
+            return_exceptions=True
         )
         
-        return results
+        # Process results and handle any unexpected exceptions
+        processed_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                # Handle unexpected exceptions that weren't caught
+                url = urls[i] if i < len(urls) else "unknown"
+                logger.error(f"Unexpected exception in batch crawl for {url}: {str(result)}", exc_info=result)
+                processed_results.append(CrawlResult(
+                    url=url,
+                    markdown="",
+                    success=False,
+                    error=f"Unexpected error: {str(result)}"
+                ))
+            else:
+                processed_results.append(result)
+        
+        return processed_results
 
