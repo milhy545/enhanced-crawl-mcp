@@ -26,9 +26,7 @@ class CrawlRequest(BaseModel):
     include_links: bool = Field(default=False, description="Include extracted links in response")
     include_images: bool = Field(default=False, description="Include extracted images in response")
     max_depth: int = Field(default=1, description="Maximum crawl depth", ge=1, le=5)
-    timeout: int | None = Field(
-        default=None, description="Custom timeout in seconds", ge=5, le=300
-    )
+    timeout: int | None = Field(default=None, description="Custom timeout in seconds", ge=5, le=300)
 
     @field_validator("url")
     @classmethod
@@ -114,6 +112,7 @@ class CrawlResponse(BaseModel):
     crawled_at: datetime = Field(default_factory=datetime.utcnow, description="Crawl timestamp")
 
     model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
         json_schema_extra={
             "example": {
                 "status": "success",
@@ -124,7 +123,7 @@ class CrawlResponse(BaseModel):
                 "metadata": {"title": "Example Domain"},
                 "crawled_at": "2024-01-01T12:00:00",
             }
-        }
+        },
     )
 
 
@@ -168,6 +167,7 @@ class JobStatusResponse(BaseModel):
     error_message: str | None = Field(default=None, description="Error message if failed")
 
     model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
         json_schema_extra={
             "example": {
                 "job_id": "batch_123456",
@@ -180,7 +180,7 @@ class JobStatusResponse(BaseModel):
                 "progress": 70.0,
                 "error_message": None,
             }
-        }
+        },
     )
 
 
@@ -241,6 +241,7 @@ class ErrorResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
 
     model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
         json_schema_extra={
             "example": {
                 "error": "ValidationError",
@@ -248,7 +249,7 @@ class ErrorResponse(BaseModel):
                 "details": {"url": "invalid-url", "reason": "Missing scheme"},
                 "timestamp": "2024-01-01T12:00:00",
             }
-        }
+        },
     )
 
 
@@ -260,7 +261,8 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
 
     model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
         json_schema_extra={
             "example": {"status": "ok", "version": "1.0.0", "timestamp": "2024-01-01T12:00:00"}
-        }
+        },
     )

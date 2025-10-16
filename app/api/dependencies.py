@@ -4,31 +4,28 @@ API dependencies and utilities.
 
 import time
 import uuid
-from typing import Optional
-from fastapi import Request, HTTPException
+
+from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 from app.config import get_settings
-from app.utils.logging import get_logger, RequestLogger
-from app.core.exceptions import CrawlMCPException
-from app.models import ErrorResponse
+from app.utils.logging import RequestLogger, get_logger
 
 logger = get_logger(__name__)
 request_logger = RequestLogger(logger)
 
 # In-memory storage for stats (in production, use Redis or database)
-server_stats = {
+server_stats: dict[str, float | int | list[float]] = {
     "start_time": time.time(),
     "total_requests": 0,
     "successful_crawls": 0,
     "failed_crawls": 0,
     "active_jobs": 0,
-    "response_times": []
+    "response_times": [],
 }
 
 # In-memory job storage (in production, use Redis or database)
-jobs_storage: dict = {}
+jobs_storage: dict[str, dict] = {}
 
 
 def get_request_id() -> str:
@@ -38,20 +35,20 @@ def get_request_id() -> str:
 
 def get_stats() -> dict:
     """Get current server statistics."""
-    uptime = time.time() - server_stats["start_time"]
-    avg_response_time = (
-        sum(server_stats["response_times"]) / len(server_stats["response_times"])
-        if server_stats["response_times"]
-        else 0.0
-    )
-    
+    start_time = server_stats["start_time"]
+    assert isinstance(start_time, (int, float))
+    uptime = time.time() - start_time
+    response_times = server_stats["response_times"]
+    assert isinstance(response_times, list)
+    avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
+
     return {
         "uptime_seconds": uptime,
         "total_requests": server_stats["total_requests"],
         "successful_crawls": server_stats["successful_crawls"],
         "failed_crawls": server_stats["failed_crawls"],
         "active_jobs": server_stats["active_jobs"],
-        "avg_response_time": avg_response_time
+        "avg_response_time": avg_response_time,
     }
 
 
@@ -72,10 +69,12 @@ def increment_crawl_failure():
 
 def add_response_time(duration_ms: float):
     """Add response time to statistics."""
-    server_stats["response_times"].append(duration_ms)
+    response_times = server_stats["response_times"]
+    assert isinstance(response_times, list)
+    response_times.append(duration_ms)
     # Keep only last 1000 response times
-    if len(server_stats["response_times"]) > 1000:
-        server_stats["response_times"] = server_stats["response_times"][-1000:]
+    if len(response_times) > 1000:
+        server_stats["response_times"] = response_times[-1000:]
 
 
 def store_job(job_id: str, job_data: dict):
@@ -83,7 +82,7 @@ def store_job(job_id: str, job_data: dict):
     jobs_storage[job_id] = job_data
 
 
-def get_job(job_id: str) -> Optional[dict]:
+def get_job(job_id: str) -> dict | None:
     """Retrieve job data."""
     return jobs_storage.get(job_id)
 
@@ -102,100 +101,89 @@ def delete_job(job_id: str):
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add request ID to all requests."""
-    
+
     async def dispatch(self, request: Request, call_next):
         request_id = get_request_id()
         request.state.request_id = request_id
-        
+
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
-        
+
         return response
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for request/response logging."""
-    
+
     async def dispatch(self, request: Request, call_next):
         request_id = getattr(request.state, "request_id", "unknown")
         start_time = time.time()
-        
+
         # Log request
-        request_logger.log_request(
-            request.method,
-            request.url.path,
-            request_id
-        )
-        
+        request_logger.log_request(request.method, request.url.path, request_id)
+
         # Increment request counter
         increment_request_count()
-        
+
         # Process request
         try:
             response = await call_next(request)
         except Exception as e:
             logger.error(f"Request processing error: {str(e)}", exc_info=e)
             raise
-        
+
         # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
         add_response_time(duration_ms)
-        
+
         # Log response
         request_logger.log_response(
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
-            request_id
+            request.method, request.url.path, response.status_code, duration_ms, request_id
         )
-        
+
         return response
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple in-memory rate limiting middleware."""
-    
+
     def __init__(self, app, requests_per_minute: int = 100):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
-        self.requests = {}
-    
+        self.requests: dict[str, list[float]] = {}
+
     async def dispatch(self, request: Request, call_next):
         settings = get_settings()
-        
+
         if not settings.rate_limit_enabled:
             return await call_next(request)
-        
+
         # Use IP address as key (in production, use API key or user ID)
         client_ip = request.client.host if request.client else "unknown"
         current_time = time.time()
-        
+
         # Clean old entries
         self.requests = {
             ip: timestamps
             for ip, timestamps in self.requests.items()
             if any(t > current_time - 60 for t in timestamps)
         }
-        
+
         # Check rate limit
         if client_ip in self.requests:
             # Remove timestamps older than 1 minute
             self.requests[client_ip] = [
-                t for t in self.requests[client_ip]
-                if t > current_time - 60
+                t for t in self.requests[client_ip] if t > current_time - 60
             ]
-            
+
             if len(self.requests[client_ip]) >= settings.rate_limit_requests:
                 raise HTTPException(
-                    status_code=429,
-                    detail="Rate limit exceeded. Please try again later."
+                    status_code=429, detail="Rate limit exceeded. Please try again later."
                 )
         else:
             self.requests[client_ip] = []
-        
+
         # Add current request
         self.requests[client_ip].append(current_time)
-        
-        return await call_next(request)
 
+        return await call_next(request)
