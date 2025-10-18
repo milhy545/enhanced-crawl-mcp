@@ -26,9 +26,7 @@ class CrawlRequest(BaseModel):
     include_links: bool = Field(default=False, description="Include extracted links in response")
     include_images: bool = Field(default=False, description="Include extracted images in response")
     max_depth: int = Field(default=1, description="Maximum crawl depth", ge=1, le=5)
-    timeout: int | None = Field(
-        default=None, description="Custom timeout in seconds", ge=5, le=300
-    )
+    timeout: int | None = Field(default=None, description="Custom timeout in seconds", ge=5, le=300)
 
     @field_validator("url")
     @classmethod
