@@ -2,7 +2,7 @@
 Pydantic models for API requests and responses.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -26,9 +26,7 @@ class CrawlRequest(BaseModel):
     include_links: bool = Field(default=False, description="Include extracted links in response")
     include_images: bool = Field(default=False, description="Include extracted images in response")
     max_depth: int = Field(default=1, description="Maximum crawl depth", ge=1, le=5)
-    timeout: int | None = Field(
-        default=None, description="Custom timeout in seconds", ge=5, le=300
-    )
+    timeout: int | None = Field(default=None, description="Custom timeout in seconds", ge=5, le=300)
 
     @field_validator("url")
     @classmethod
@@ -111,7 +109,9 @@ class CrawlResponse(BaseModel):
     links: list[str] | None = Field(default=None, description="Extracted links")
     images: list[str] | None = Field(default=None, description="Extracted image URLs")
     metadata: dict[str, Any] | None = Field(default=None, description="Additional metadata")
-    crawled_at: datetime = Field(default_factory=datetime.utcnow, description="Crawl timestamp")
+    crawled_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Crawl timestamp"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -238,9 +238,12 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
     details: dict[str, Any] | None = Field(default=None, description="Additional error details")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Error timestamp"
+    )
 
     model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat()},
         json_schema_extra={
             "example": {
                 "error": "ValidationError",
@@ -248,7 +251,7 @@ class ErrorResponse(BaseModel):
                 "details": {"url": "invalid-url", "reason": "Missing scheme"},
                 "timestamp": "2024-01-01T12:00:00",
             }
-        }
+        },
     )
 
 
@@ -257,7 +260,9 @@ class HealthResponse(BaseModel):
 
     status: str = Field(default="ok", description="Health status")
     version: str = Field(..., description="Application version")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), description="Check timestamp"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
