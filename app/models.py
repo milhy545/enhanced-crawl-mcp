@@ -114,6 +114,9 @@ class CrawlResponse(BaseModel):
     crawled_at: datetime = Field(default_factory=datetime.utcnow, description="Crawl timestamp")
 
     model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        },
         json_schema_extra={
             "example": {
                 "status": "success",
@@ -168,6 +171,9 @@ class JobStatusResponse(BaseModel):
     error_message: str | None = Field(default=None, description="Error message if failed")
 
     model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        },
         json_schema_extra={
             "example": {
                 "job_id": "batch_123456",
@@ -241,6 +247,9 @@ class ErrorResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
 
     model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        },
         json_schema_extra={
             "example": {
                 "error": "ValidationError",
@@ -260,6 +269,9 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
 
     model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        },
         json_schema_extra={
             "example": {"status": "ok", "version": "1.0.0", "timestamp": "2024-01-01T12:00:00"}
         }
