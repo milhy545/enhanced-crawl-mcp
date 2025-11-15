@@ -75,3 +75,27 @@ jobs:
         safety check --json || true
         safety check
 
+            - název: Souhrn problémů
+  # Můžete se připnout k přesnému commitu nebo k verzi.
+  # použití: sourcegraph/summary-issues@9a33468abb4f7415f4dad4424f7ad8aee136fbe9
+  použití: sourcegraph/summary-issues@v1.2.1
+  s:
+    # V souhrnu se použije nejnovější komentář k problému, který odpovídá tomuto regulárnímu výrazu. Pokud není uveden, vždy se použije nejnovější komentář.
+    summaryCommentRegex: # volitelné
+              - název: Přidat do projektů GitHubu
+  použití: actions/add-to-project@v1.0.2
+  s:
+    # URL adresa projektu, do kterého se mají přidat úlohy
+    URL projektu:
+    # Osobní přístupový token GitHubu s oprávněním pro zápis do projektu
+    token githubu:
+    # Seznam štítků oddělených čárkami, které se mají použít jako filtr pro přidání problému
+    označeno: # volitelné
+    # Chování filtru popisků: A pro shodu se všemi popisky, NEBO pro shodu s libovolným popiskem, NE pro vyloučení žádného uvedeného popisku (výchozí je NEBO)
+    operátor-label: # volitelný
+            - název: github-issues-automatizace
+  # Můžete se připnout k přesnému commitu nebo k verzi.
+  # použití: Tavh/github-issues-automation@58ea35c114305d839468cfa28e28a980e1939fd6
+  použití: Tavh/github-issues-automation@0.0.1
+ - name: Claude Code Action Official
+  uses: anthropics/claude-code-action@v1                           
