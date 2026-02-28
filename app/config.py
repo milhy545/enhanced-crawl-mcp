@@ -47,9 +47,7 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=100, description="Max requests per minute")
 
     # Security settings
-    allowed_schemes: list[str] | str = Field(
-        default=["http", "https"], description="Allowed URL schemes for crawling"
-    )
+    allowed_schemes: list[str] = Field(default=["http", "https"], description="Allowed URL schemes for crawling")
     blocked_domains: list[str] | str = Field(
         default=[], description="Domains blocked from crawling"
     )
@@ -94,6 +92,14 @@ class Settings(BaseSettings):
                 return []
             return [domain.strip() for domain in v.split(",") if domain.strip()]
         return v
+
+    @field_validator("allowed_schemes", mode="before")
+    @classmethod
+    def parse_allowed_schemes(cls, v):
+        """Normalize allowed schemes from string or list."""
+        if isinstance(v, str):
+            return [scheme.strip().lower() for scheme in v.split(",") if scheme.strip()]
+        return [scheme.lower() for scheme in v]
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, env_prefix="CRAWL_MCP_"

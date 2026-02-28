@@ -4,6 +4,7 @@ Unit tests for validators module.
 
 import pytest
 
+from app import config
 from app.core.exceptions import URLValidationError
 from app.utils.validators import extract_domain, is_valid_url, normalize_url, validate_url
 
@@ -32,6 +33,17 @@ class TestValidators:
         with pytest.raises(URLValidationError) as exc:
             validate_url("ftp://example.com")
         assert "not allowed" in str(exc.value)
+
+    def test_validate_url_allowed_schemes_from_string(self, monkeypatch):
+        """Ensure string allowed_schemes config is normalized."""
+        custom_settings = config.Settings(allowed_schemes="https")
+        monkeypatch.setattr(config, "settings", custom_settings)
+
+        with pytest.raises(URLValidationError):
+            validate_url("s://example.com")
+
+        scheme, _ = validate_url("https://example.com")
+        assert scheme == "https"
 
     def test_validate_url_missing_domain(self):
         """Test URL without domain."""
