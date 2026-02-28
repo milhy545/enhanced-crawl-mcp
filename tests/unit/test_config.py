@@ -61,6 +61,14 @@ class TestSettings:
         settings = Settings(blocked_domains=["spam.com"])
         assert settings.blocked_domains == ["spam.com"]
 
+    def test_allowed_schemes_parsing(self):
+        """Test allowed schemes parsing from string."""
+        settings = Settings(allowed_schemes="https")
+        assert settings.allowed_schemes == ["https"]
+
+        settings = Settings(allowed_schemes="http, https")
+        assert settings.allowed_schemes == ["http", "https"]
+
     def test_get_settings(self):
         """Test get_settings function."""
         settings = get_settings()
