@@ -7,6 +7,7 @@ A microservice for web crawling optimized for AI/LLM consumption.
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -73,7 +74,7 @@ async def crawl_mcp_exception_handler(request, exc: CrawlMCPException):
     error_response = ErrorResponse(
         error=exc.__class__.__name__, message=exc.message, details=exc.details
     )
-    return JSONResponse(status_code=exc.status_code, content=error_response.dict())
+    return JSONResponse(status_code=exc.status_code, content=jsonable_encoder(error_response))
 
 
 @app.exception_handler(Exception)
@@ -85,7 +86,7 @@ async def generic_exception_handler(request, exc: Exception):
         message="An unexpected error occurred",
         details={"error": str(exc)},
     )
-    return JSONResponse(status_code=500, content=error_response.dict())
+    return JSONResponse(status_code=500, content=jsonable_encoder(error_response))
 
 
 # Include API routes
