@@ -141,7 +141,7 @@ class WebCrawler:
 
                 return result
 
-            except TimeoutError as e:
+            except (asyncio.TimeoutError, TimeoutError) as e:
                 last_error = CrawlTimeoutError(url, timeout)
                 if attempt >= max_retries:
                     crawler_logger.log_crawl_failure(url, request_id, str(last_error), exc_info=e)
@@ -181,7 +181,7 @@ class WebCrawler:
         # Execute crawl with timeout
         try:
             result = await asyncio.wait_for(self._crawler.arun(url), timeout=timeout)
-        except TimeoutError:
+        except (asyncio.TimeoutError, TimeoutError):
             raise
         except Exception as e:
             raise CrawlError(f"Crawler execution failed: {str(e)}", url=url)
