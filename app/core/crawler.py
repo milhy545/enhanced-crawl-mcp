@@ -146,6 +146,9 @@ class WebCrawler:
                 timeout_error = CrawlTimeoutError(url, timeout)
                 if attempt >= max_retries:
                     crawler_logger.log_crawl_failure(url, request_id, str(timeout_error), exc_info=e)
+                    crawler_logger.log_crawl_failure(
+                        url, request_id, str(timeout_error), exc_info=e
+                    )
                     raise timeout_error from e
 
             except Exception as e:
@@ -211,12 +214,14 @@ class WebCrawler:
 
         # Extract images if requested
         images: list[str] = []
+        images = []
         if include_images and hasattr(result, "media"):
             if isinstance(result.media, dict) and "images" in result.media:
                 images = [img.get("src") for img in result.media["images"] if img.get("src")]
 
         # Build metadata
         metadata: dict[str, Any] = {}
+        metadata = {}
         if hasattr(result, "metadata"):
             metadata = result.metadata if isinstance(result.metadata, dict) else {}
 

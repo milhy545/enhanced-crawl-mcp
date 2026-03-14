@@ -23,6 +23,7 @@ server_stats: dict[str, Any] = {
     "failed_crawls": 0,
     "active_jobs": 0,
     "response_times": [],
+    "response_times": cast(list[float], []),
 }
 
 # In-memory job storage (in production, use Redis or database)
@@ -39,6 +40,9 @@ def get_stats() -> dict:
     uptime = time.time() - cast(float, server_stats["start_time"])
     response_times = cast(list[float], server_stats["response_times"])
     avg_response_time = (sum(response_times) / len(response_times)) if response_times else 0.0
+    uptime = time.time() - server_stats["start_time"]
+    response_times = cast(list[float], server_stats["response_times"])
+    avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
 
     return {
         "uptime_seconds": uptime,
@@ -67,10 +71,11 @@ def increment_crawl_failure():
 
 def add_response_time(duration_ms: float):
     """Add response time to statistics."""
-    server_stats["response_times"].append(duration_ms)
+    response_times = cast(list[float], server_stats["response_times"])
+    response_times.append(duration_ms)
     # Keep only last 1000 response times
-    if len(server_stats["response_times"]) > 1000:
-        server_stats["response_times"] = server_stats["response_times"][-1000:]
+    if len(response_times) > 1000:
+        server_stats["response_times"] = response_times[-1000:]
 
 
 def store_job(job_id: str, job_data: dict):
