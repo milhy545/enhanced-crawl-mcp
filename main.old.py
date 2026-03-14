@@ -1,10 +1,11 @@
 import sys
+
 sys.path.insert(0, '/home/milhy777/Develop/Development/crawl-mcp/libs/crawl4ai')
 
+
+from crawl4ai import AsyncWebCrawler
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import asyncio
-from crawl4ai import AsyncWebCrawler
 
 app = FastAPI(
     title="Crawl MCP",
@@ -22,7 +23,7 @@ async def crawl_url(request: CrawlRequest):
     """
     if not request.url:
         raise HTTPException(status_code=400, detail="URL is required.")
-    
+
     try:
         async with AsyncWebCrawler() as crawler:
             result = await crawler.arun(request.url)
@@ -31,7 +32,7 @@ async def crawl_url(request: CrawlRequest):
             else:
                 raise HTTPException(status_code=500, detail="Failed to retrieve content.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}") from e
 
 @app.get("/")
 def read_root():

@@ -3,13 +3,13 @@ Pydantic models for API requests and responses.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """Job status enumeration."""
 
     PENDING = "pending"

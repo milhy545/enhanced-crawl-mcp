@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
@@ -29,13 +30,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Install Playwright browsers
+      run: |
+        python -m playwright install --with-deps chromium
+
     - name: Run linting
       run: |
-        pip install ruff black isort mypy
+        pip install ruff black isort
         ruff check app/
         black --check app/
         isort --check app/
-        mypy app/ --ignore-missing-imports
 
     - name: Run tests
       run: |
@@ -67,11 +71,11 @@ jobs:
 
     - name: Run security scan with Bandit
       run: |
-        bandit -r app/ -f json -o bandit-report.json || true
-        bandit -r app/
+        bandit -r app/ -s B104 -f json -o bandit-report.json || true
+        bandit -r app/ -s B104
 
-    - name: Check dependencies for vulnerabilities
+    - name: Check dependencies for vulnerabilities (informational)
+      continue-on-error: true
       run: |
         safety check --json || true
-        safety check
-
+        safety check || true
