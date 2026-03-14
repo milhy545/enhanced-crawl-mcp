@@ -40,7 +40,7 @@ Server běží na: **http://localhost:8000**
 curl http://localhost:8000/health
 
 # Crawluj webovou stránku
-curl -X POST "http://localhost:8000/crawl" \
+curl -X POST "http://localhost:8000/api/v1/crawl" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com"}'
 
