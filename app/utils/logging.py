@@ -2,18 +2,19 @@
 Logging configuration and utilities.
 """
 
-import sys
-import logging
 import json
+import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
 from app.config import get_settings
 
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter for structured logging."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data = {
@@ -25,30 +26,30 @@ class JSONFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
-        
+
         # Add exception info if present
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
-        
+
         # Add extra fields
         if hasattr(record, "request_id"):
             log_data["request_id"] = record.request_id
-        
+
         if hasattr(record, "url"):
             log_data["url"] = record.url
-        
+
         if hasattr(record, "duration"):
             log_data["duration_ms"] = record.duration
-        
+
         if hasattr(record, "status_code"):
             log_data["status_code"] = record.status_code
-        
+
         return json.dumps(log_data)
 
 
 class TextFormatter(logging.Formatter):
     """Custom text formatter for readable logging."""
-    
+
     def __init__(self):
         fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         super().__init__(fmt=fmt, datefmt="%Y-%m-%d %H:%M:%S")
@@ -57,52 +58,52 @@ class TextFormatter(logging.Formatter):
 def setup_logging() -> logging.Logger:
     """
     Setup application logging.
-    
+
     Returns:
         Configured logger instance
     """
     settings = get_settings()
-    
+
     # Get root logger
     logger = logging.getLogger("crawl_mcp")
     logger.setLevel(settings.log_level)
-    
+
     # Remove existing handlers
     logger.handlers.clear()
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(settings.log_level)
-    
+
     # Choose formatter based on settings
     if settings.log_format == "json":
         formatter = JSONFormatter()
     else:
         formatter = TextFormatter()
-    
+
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
+
     # File handler if log file is specified
     if settings.log_file:
         log_path = Path(settings.log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         file_handler = logging.FileHandler(log_path)
         file_handler.setLevel(settings.log_level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    
+
     return logger
 
 
 def get_logger(name: str = "crawl_mcp") -> logging.Logger:
     """
     Get a logger instance.
-    
+
     Args:
         name: Logger name
-        
+
     Returns:
         Logger instance
     """
@@ -111,10 +112,10 @@ def get_logger(name: str = "crawl_mcp") -> logging.Logger:
 
 class RequestLogger:
     """Helper class for logging HTTP requests."""
-    
+
     def __init__(self, logger: logging.Logger):
         self.logger = logger
-    
+
     def log_request(
         self,
         method: str,
@@ -128,7 +129,7 @@ class RequestLogger:
             f"Request: {method} {path}",
             extra=extra
         )
-    
+
     def log_response(
         self,
         method: str,
@@ -149,7 +150,7 @@ class RequestLogger:
             f"Response: {method} {path} - {status_code} ({duration_ms:.2f}ms)",
             extra=extra
         )
-    
+
     def log_error(
         self,
         message: str,
@@ -164,15 +165,15 @@ class RequestLogger:
 
 class CrawlerLogger:
     """Helper class for logging crawler operations."""
-    
+
     def __init__(self, logger: logging.Logger):
         self.logger = logger
-    
+
     def log_crawl_start(self, url: str, request_id: str, **kwargs: Any) -> None:
         """Log start of crawl operation."""
         extra = {"url": url, "request_id": request_id, **kwargs}
         self.logger.info(f"Starting crawl: {url}", extra=extra)
-    
+
     def log_crawl_success(
         self,
         url: str,
@@ -193,7 +194,7 @@ class CrawlerLogger:
             f"Crawl successful: {url} ({content_length} bytes, {duration_ms:.2f}ms)",
             extra=extra
         )
-    
+
     def log_crawl_failure(
         self,
         url: str,
@@ -209,7 +210,7 @@ class CrawlerLogger:
             exc_info=exc_info,
             extra=extra
         )
-    
+
     def log_retry(
         self,
         url: str,
