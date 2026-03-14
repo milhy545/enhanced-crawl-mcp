@@ -179,7 +179,7 @@ Po spuštění navštivte:
 
 ```bash
 # Pomocí curl
-curl -X POST "http://localhost:8000/crawl" \
+curl -X POST "http://localhost:8000/api/v1/crawl" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com"}'
 
