@@ -42,15 +42,15 @@ class Settings(BaseSettings):
     # API settings
     api_prefix: str = Field(default="/api/v1", description="API route prefix")
     cors_enabled: bool = Field(default=True, description="Enable CORS")
-    cors_origins: list[str] = Field(default=["*"], description="Allowed CORS origins")
+    cors_origins: list[str] | str = Field(default=["*"], description="Allowed CORS origins")
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_requests: int = Field(default=100, description="Max requests per minute")
 
     # Security settings
-    allowed_schemes: list[str] = Field(
-        default=["http", "https"], description="Allowed URL schemes for crawling"
+    allowed_schemes: list[str] = Field(default=["http", "https"], description="Allowed URL schemes for crawling")
+    blocked_domains: list[str] | str = Field(
+        default=[], description="Domains blocked from crawling"
     )
-    blocked_domains: list[str] = Field(default=[], description="Domains blocked from crawling")
 
     # Job/Task settings
     job_cleanup_interval: int = Field(
@@ -88,8 +88,18 @@ class Settings(BaseSettings):
     def parse_blocked_domains(cls, v):
         """Parse blocked domains from string or list."""
         if isinstance(v, str):
-            return [domain.strip() for domain in v.split(",")]
+            if not v.strip():
+                return []
+            return [domain.strip() for domain in v.split(",") if domain.strip()]
         return v
+
+    @field_validator("allowed_schemes", mode="before")
+    @classmethod
+    def parse_allowed_schemes(cls, v):
+        """Normalize allowed schemes from string or list."""
+        if isinstance(v, str):
+            return [scheme.strip().lower() for scheme in v.split(",") if scheme.strip()]
+        return [scheme.lower() for scheme in v]
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, env_prefix="CRAWL_MCP_"
