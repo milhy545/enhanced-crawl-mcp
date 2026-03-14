@@ -22,6 +22,7 @@ server_stats: dict[str, Any] = {
     "successful_crawls": 0,
     "failed_crawls": 0,
     "active_jobs": 0,
+    "response_times": [],
     "response_times": cast(list[float], []),
 }
 
@@ -36,6 +37,9 @@ def get_request_id() -> str:
 
 def get_stats() -> dict:
     """Get current server statistics."""
+    uptime = time.time() - cast(float, server_stats["start_time"])
+    response_times = cast(list[float], server_stats["response_times"])
+    avg_response_time = (sum(response_times) / len(response_times)) if response_times else 0.0
     uptime = time.time() - server_stats["start_time"]
     response_times = cast(list[float], server_stats["response_times"])
     avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
