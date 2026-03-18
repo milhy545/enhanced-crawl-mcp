@@ -141,7 +141,7 @@ class WebCrawler:
 
                 return result
 
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 last_error = CrawlTimeoutError(url, timeout)
                 if attempt >= max_retries:
                     crawler_logger.log_crawl_failure(url, request_id, str(last_error), exc_info=e)
@@ -173,7 +173,7 @@ class WebCrawler:
 
         Raises:
             ContentExtractionError: If content extraction fails
-            asyncio.TimeoutError: If operation times out
+            TimeoutError: If operation times out
         """
         if not self._crawler:
             raise CrawlError("Crawler not initialized. Use async context manager.")
