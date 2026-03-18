@@ -20,3 +20,8 @@ isort>=5.12.0
 ruff>=0.1.0
 mypy>=1.5.0
 bandit>=1.7.5
+
+# Security Note:
+# Before installing, ensure build tools are updated to fix known vulnerabilities:
+# pip install --upgrade "pip>=25.3" "setuptools>=78.1.1"
+# See SECURITY.md for more details.
