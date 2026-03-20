@@ -198,7 +198,7 @@ async def crawl_batch(
             "status": JobStatus.COMPLETED,
             "completed": successful,
             "failed": failed,
-            "results": [r.dict() for r in crawl_responses],
+            "results": [r.model_dump(mode="json") for r in crawl_responses],
             "updated_at": datetime.utcnow()
         })
         
@@ -218,9 +218,13 @@ async def crawl_batch(
             "error_message": str(e),
             "updated_at": datetime.utcnow()
         })
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "BatchCrawlError", "message": str(e)}
+        return BatchCrawlResponse(
+            job_id=job_id,
+            status=JobStatus.FAILED,
+            total_urls=len(request.urls),
+            completed=0,
+            failed=len(request.urls),
+            results=[]
         )
 
 
@@ -298,4 +302,3 @@ async def validate_url_endpoint(request: URLValidationRequest):
             is_blocked=False,
             error_message=f"Validation error: {str(e)}"
         )
-
