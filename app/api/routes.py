@@ -210,13 +210,17 @@ async def crawl_batch(request: BatchCrawlRequest, http_request: Request):
             job_id,
             {"status": JobStatus.FAILED, "error_message": str(e), "updated_at": datetime.utcnow()},
         )
-        return BatchCrawlResponse(
+        failed_response = BatchCrawlResponse(
             job_id=job_id,
             status=JobStatus.FAILED,
             total_urls=len(request.urls),
             completed=0,
             failed=len(request.urls),
-            results=[],
+            results=[]
+        )
+        return JSONResponse(
+            status_code=500,
+            content=jsonable_encoder(failed_response)
         )
 
 
