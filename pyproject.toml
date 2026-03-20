@@ -24,7 +24,7 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "crawl4ai",
+    "crawl4ai==0.8.5",
     "python-dotenv>=1.0.0",
 ]
 
@@ -151,4 +151,3 @@ exclude = [
     "libs",
     "tests",
 ]
-
